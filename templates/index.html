@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container text-center">
+    <h1 class="display-4">Bem-vindo ao seu Cofre Digital de Senhas</h1>
+    <p class="lead">A maneira mais segura de armazenar e gerenciar suas senhas!</p>
+    {% if not current_user.is_authenticated %}
+    <div class="mt-4">
+        <a class="btn btn-primary btn-lg" href="{{ url_for('register') }}" role="button">Criar Conta</a>
+        <a class="btn btn-secondary btn-lg" href="{{ url_for('login') }}" role="button">Fazer Login</a>
+    </div>
+    {% else %}
+    <div class="mt-4">
+        <a class="btn btn-primary btn-lg" href="{{ url_for('dashboard') }}" role="button">Ir para o Dashboard</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

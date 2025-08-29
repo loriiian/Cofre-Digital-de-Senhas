@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">Seu Cofre de Senhas</h2>
+    <a href="{{ url_for('add_password') }}" class="btn btn-primary mb-3">Adicionar Nova Senha</a>
+    <div class="content-header">
+    <div class="backup-actions">
+        <a href="{{ url_for('export_passwords') }}" class="btn btn-secondary">
+            <i class="fas fa-file-export"></i> Exportar Senhas
+        </a>
+        <a href="{{ url_for('import_passwords') }}" class="btn btn-secondary">
+            <i class="fas fa-file-import"></i> Importar Senhas
+        </a>
+    </div>
+</div>
+    
+    {% if passwords %}
+ <table class="table table-hover">
+        <thead>
+            <tr>
+                <th scope="col">Serviço</th>
+                <th scope="col">Usuário/Senha</th>
+                <th scope="col">Ações</th>
+                <th scope="col"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in passwords %}
+            <tr>
+                <td>
+                    {% set service_name_lower = entry.service_name | lower %}
+                    <div class="service-cell">
+                        {% if 'google' in service_name_lower %}
+                            <img src="https://cdn.simpleicons.org/google/white" alt="Google" class="service-logo">
+                        {% elif 'github' in service_name_lower %}
+                            <img src="https://cdn.simpleicons.org/github/white" alt="GitHub" class="service-logo">
+                        {% elif 'facebook' in service_name_lower %}
+                            <img src="https://cdn.simpleicons.org/facebook/white" alt="Facebook" class="service-logo">
+                        {% elif 'instagram' in service_name_lower %}
+                            <img src="https://cdn.simpleicons.org/instagram/white" alt="Instagram" class="service-logo">
+                        {% elif 'twitter' in service_name_lower or 'x.com' in service_name_lower %}
+                            <img src="https://cdn.simpleicons.org/x/white" alt="X (Twitter)" class="service-logo">
+                        {% elif 'linkedin' in service_name_lower %}
+                            <img src="https://cdn.simpleicons.org/linkedin/white" alt="LinkedIn" class="service-logo">
+                        {% elif 'discord' in service_name_lower %}
+                            <img src="https://cdn.simpleicons.org/discord/white" alt="Discord" class="service-logo">
+                        {% else %}
+                            <svg class="service-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+                        {% endif %}
+                        <span>{{ entry.service_name }}</span>
+                    </div>
+                </td>
+                <td class="copy-container">
+                    <span id="username-{{ entry.id }}">{{ entry.username_or_email }}</span>
+                    <button class="btn-copy" onclick="copyToClipboard('{{ entry.username_or_email }}', this)">Copiar</button>
+                </td>
+                <td class="copy-container" id="password-cell-{{ entry.id }}">
+                    <span>••••••••</span>
+                </td>
+                <td>
+                    <button class="btn btn-primary btn-sm" onclick="viewPassword({{ entry.id }})">
+                        Visualizar
+                    </button>
+                    <a href="{{ url_for('update_password', password_id=entry.id) }}" class="btn btn-secondary btn-sm">
+                        Editar
+                    </a>
+                    <form action="{{ url_for('delete_password', password_id=entry.id) }}" method="POST" style="display:inline;">
+                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Tem certeza que deseja excluir esta senha?');">
+                            Excluir
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="alert alert-info">
+        Você ainda não tem senhas salvas. <a href="{{ url_for('add_password') }}">Adicione uma agora!</a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function copyToClipboard(text, buttonElement) {
+    const tempInput = document.createElement('textarea');
+    tempInput.value = text;
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    document.execCommand('copy');
+    document.body.removeChild(tempInput);
+
+    const originalText = buttonElement.innerText;
+    buttonElement.innerText = 'Copiado!';
+    setTimeout(() => {
+        buttonElement.innerText = originalText;
+    }, 1500);
+}
+
+async function viewPassword(passwordId) {
+    const passwordCell = document.getElementById(`password-cell-${passwordId}`);
+    const originalHTML = passwordCell.innerHTML;
+
+    if (passwordCell.querySelector('span').innerText !== '••••••••') {
+        passwordCell.innerHTML = '<span>••••••••</span>';
+        return;
+    }
+
+    try {
+        const response = await fetch(`/view_password/${passwordId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) throw new Error('Falha ao buscar a senha.');
+
+        const data = await response.json();
+
+        if (data.password) {
+            passwordCell.innerHTML = `
+                <span>${data.password}</span>
+                <button class="btn-copy" onclick="copyToClipboard('${data.password.replace(/'/g, "\\'")}', this)">Copiar</button>
+            `;
+        } else {
+            passwordCell.innerHTML = '<span>Erro!</span>';
+        }
+
+    } catch (error) {
+        console.error('Erro:', error);
+        passwordCell.innerHTML = '<span>Falha na requisição.</span>';
+    }
+}
+</script>
+{% endblock %}
